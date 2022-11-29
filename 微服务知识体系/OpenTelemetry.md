@@ -182,3 +182,8 @@ SDK 将来自 OpenTelemetry API 的遥测数据连接到导出器。
     注意`trace.NewTracerProvider()`中可规定发送span的方式是异步还是同步，当使用`trace.WithSyncer()`时是同步发送；当使用`trace.WithBatcher()`时是通过通道(默认长度2048)异步按批发送，每隔一段时间(默认批处理5s超时触发)发送 or 达到最大批处理长度(默认512)时把要批处理的span利用导出器导出(也可手动调用ForceFlush强制导出)，当通道满了之后再存入span也有两种策略：丢弃这个span(默认)或者阻塞住直到队列有空位
 
 - 
+
+
+## 参考：
+官网：https://opentelemetry.io/docs/ \
+https://dmathieu.com/articles/development/dissecting-opentelemetry-tracing/ 

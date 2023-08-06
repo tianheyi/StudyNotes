@@ -1,0 +1,119 @@
+腾讯云安装MySQL
+
+1.检查服务器是否安装了mysql
+yum list installed mysql*
+
+
+[root@VM_0_15_centos ~]# yum list installed mysql*
+Loaded plugins: fastestmirror, langpacks
+Loading mirror speeds from cached hostfile
+Error: No matching Packages to list
+
+如果出现以上则证明没有安装过
+
+2.下载mysql源
+sudo wget https://repo.mysql.com//mysql80-community-release-el7-1.noarch.rpm
+
+
+4.安装下载好的rpm包
+sudo rpm -ivh mysql80-community-release-el7-1.noarch.rpm
+
+5.安装MySQL，发现提示 y到底（这部分会很慢 请慢慢等待预计一个多小时）
+sudo yum install mysql-server
+
+6.查看MySQL的版本。确定是否安装成功
+mysql -V
+[root@VM_0_15_centos ~]# mysql -V
+mysql  Ver 8.0.20 for Linux on x86_64 (MySQL Community Server - GPL)
+
+7.运行mysql
+service mysqld start
+有个绿点 则代表启动成功
+[root@VM_0_15_centos ~]# service mysqld status
+Redirecting to /bin/systemctl status mysqld.service
+● mysqld.service - MySQL Server
+   Loaded: loaded (/usr/lib/systemd/system/mysqld.service; enabled; vendor preset: disabled)
+   Active: active (running) since Tue 2020-06-09 13:50:06 CST; 5 days ago
+     Docs: man:mysqld(8)
+           http://dev.mysql.com/doc/refman/en/using-systemd.html
+  Process: 972 ExecStartPre=/usr/bin/mysqld_pre_systemd (code=exited, status=0/SUCCESS)
+ Main PID: 1035 (mysqld)
+   Status: "Server is operational"
+   CGroup: /system.slice/mysqld.service
+           └─1035 /usr/sbin/mysqld
+
+Jun 09 13:49:59 VM_0_15_centos systemd[1]: Starting MySQL Server...
+Jun 09 13:50:06 VM_0_15_centos systemd[1]: Started MySQL Server.
+
+8.取得MySQL初始化的随机密码
+grep "password" /var/log/mysqld.log
+记得保存好  之后修改密码要用到登录
+
+9.登录mysql
+mysql -uroot -p'这里放你的随机密码'
+
+10.更改密码(密码建议第一位用英文字母大写 中间随意 最后再加一个符号，记得保存哦 这样的保密性高)
+alter user user() identified by '你的新密码';
+	如果出现新密码强度达不到要求
+	解决办法：
+		设置新密码，后面会改，不设置新密码不能改密码强度！
+		alter user user() identified by 'asds155..Abc';
+		1、查看 mysql 初始的密码策略，
+		输入语句 “ SHOW VARIABLES LIKE 'validate_password%'; ” 进行查看，
+
+		2、首先需要设置密码的验证强度等级，设置 validate_password_policy 的全局参数为 LOW 即可，
+		输入设值语句 “ set global validate_password.policy=LOW; ” 进行设值，
+		（LOW只会检测新密码长度是否达到要求）
+
+		3、当前密码长度为 8 ，如果不介意的话就不用修改了，按照通用的来讲，设置为 6 位的密码，设置 validate_password_length 的全局参数为 6 即可，
+		输入设值语句 “ set global validate_password.length=6; ” 进行设值，
+		如下图：
+
+		4、现在可以为 mysql 设置简单密码了，只要满足六位的长度即可，
+		输入修改语句 “ ALTER USER 'root'@'localhost' IDENTIFIED BY '123456'; ” 可以看到修改成功，表示密码策略修改成功了！！！
+
+		注：在默认密码的长度最小值为 4 ，由 大/小写字母各一个 + 阿拉伯数字一个 + 特殊字符一个，
+		只要设置密码的长度小于 3 ，都将自动设值为 4 ，如下图：
+
+		关于 mysql 密码策略相关参数；
+		1）、validate_password_length  固定密码的总长度；
+		2）、validate_password_dictionary_file 指定密码验证的文件路径；
+		3）、validate_password_mixed_case_count  整个密码中至少要包含大/小写字母的总个数；
+		4）、validate_password_number_count  整个密码中至少要包含阿拉伯数字的个数；
+		5）、validate_password_policy 指定密码的强度验证等级，默认为 MEDIUM；
+		关于 validate_password_policy 的取值：
+			0/LOW：只验证长度；
+			1/MEDIUM：验证长度、数字、大小写、特殊字符；
+			2/STRONG：验证长度、数字、大小写、特殊字符、字典文件；
+		6）、validate_password_special_char_count 整个密码中至少要包含特殊字符的个数；
+
+
+设置密码永不过期
+alter user 'root'@'localhost' password expire never;
+刷新一下权限
+flush privileges;
+然后
+exit
+
+
+
+正常清空下 到这一步已经结束了，但是由于我们如果直接用root来操作数据库，有些危险，所以我们可以添加一个子管理员
+
+	1.添加用户为(你自己想) 密码（你自己想） 的子用户
+	create user '用户名'@'%' identified with mysql_native_password by '密码';
+	eg:
+	create user 'test' @'%' identified with mysql_native_password by 'thy123';
+	Query OK, 0 rows affected (0.01 sec)
+
+
+	2.设置test 这个用户可供远程访问,顺带刷新一下
+	grant all privileges on *.* to 'test'@'%' with grant option;
+	
+
+	mysql> grant all privileges on *.* to 'test'@'%' with grant option;
+	Query OK, 0 rows affected (0.01 sec)
+
+	mysql> flush privileges;
+	Query OK, 0 rows affected (0.01 sec)
+
+change master to master_host='110.42.158.229', master_user='slave', master_password='thy123',master_log_file='前面查询到的主服务器日志文件名', master_log_pos=前面查询到的主服务器日志文件位置;

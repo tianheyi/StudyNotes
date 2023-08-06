@@ -1,0 +1,29 @@
+腾讯云安装nginx
+	安装gcc、g++依赖库 （Ubuntu将yum改为apt-get）
+	sudo yum install build-essential
+	sudo yum install libtool
+	安装pcre依赖库
+	sudo yum install libpcre3 libpcre3-dev
+	安装zlib依赖库
+	wget http://prdownloads.sourceforge.net/libpng/zlib-1.2.11.tar.gz
+	tar -zxvf zlib-1.2.11.tar.gz
+	cd zlib-1.2.11
+	./configure
+	make
+	sudo make install
+
+	安装nginx
+	sudo yum install nginx
+
+	附下载安装nginx
+	wget http://nginx.org/download/nginx-1.15.12.tar.gz
+	tar -zxvf nginx-1.15.12.tar.gz
+	cd nginx-1.15.12
+	./configure --prefix=/usr/local/nginx
+	make
+	sudo make install
+
+	版权声明：本文为CSDN博主「公羽向阳」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+	原文链接：https://blog.csdn.net/qq_42766994/article/details/100067426
+
+	

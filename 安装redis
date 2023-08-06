@@ -1,0 +1,209 @@
+安装redis
+1.在/usr/local/src目录下下载redis安装包redis-6.2.6.tar.gz
+2.在此目录下执行
+	解压
+	tar zxvf redis-6.2.6.tar.gz
+	进入
+	cd redis-6.2.6
+	编译
+	make
+	安装到指定目录
+	mkdir -p /usr/local/redis
+	make PREFIX=/usr/local/redis/ install
+	进入bin目录启动redis服务
+	cd /usr/local/redis/bin/
+	./redis-server
+	可以查看信息，默认端口号是6379
+	上面是前台启动方式，我们需要使用后台启动方式
+		cd /usr/local/src/redis-6.2.6
+		cp redis.conf /usr/local/redis/bin/
+		cd /usr/local/redis/bin/
+		vim redis.conf
+		找到daemonize no，将no改为yes后，保存退出
+		./redis-server redis.conf以指定配置文件启动redis
+		查看是否启动
+			./redis-cli
+			输入ping回车，出现PONG表示后台启动成功
+
+	开启远程连接
+	vim /usr/local/redis/bin/redis.conf
+	注释掉bind 127.0.0.1
+	将protected-mode yes改为 no
+	增加远程登录密码
+		进入底层模式
+		输入/requirepass
+		找到# requirepass foobared
+		取消注释 修改foobared为自己需要的登录密码
+	保存退出
+	杀掉之前的redis进程
+		ps -ef|grep redis
+		kill -9 对应的pid
+
+	重新启动
+		./redis-server redis.conf
+
+	控制台登录redis也需要输入密码
+		./redis-cli
+		auth 密码
+		ping返回PONG即可
+
+	出现了远程连接不上的问题，重装一遍redis解决
+
+
+
+redis基本使用
+	五大数据类型：string，hash，list，set，有序集合sortedSet
+
+	string：
+		存键值对
+			set key value
+		根据键取值
+			get key
+		一次性存多个键值对
+			mset key1 value1 key2 value2 [keyn valuen...]
+		一次性取多个值
+			mget key1 key2 key3
+
+	hash:
+		存
+			hset redis_key hash_key hash_value
+			返回(integer) 1表示一共插入一个
+		取 
+			hget redis_key hash_key
+			返回 hash_value
+		存多个
+			hmset redis_key hash_key1 hash_value1 hash_key2 hash_value2 ...
+			返回OK表示成功
+		取多个
+			hmget redis_key hash_key1 hash_key2 ...
+			返回
+				1)hash_value1
+				2)hash_value2
+				3)...
+		取redis_key下全部的hash数据
+			hgetall redis_key
+			返回
+				1)hash_key1
+				2)hash_value1
+				3)hash_key2
+				4)hash_value2
+				.....
+		一次删除多个hash键值对（至少一个）
+			hdel redis_key hash_key1 hash_key2
+			返回删除成功的个数(2)
+
+
+	list:
+		左添加
+			lpush redis_key value1 value2 ...
+				如果push张三和李四
+				首先放入张三
+					|张三|   |   |
+				放入李四的时候，先把张三往后移一位，再把李四放进来
+					|   |张三|   |
+					|李四|张三|  |
+					取的时候李四在前面，相当于向左旋转90°的栈（后进先出）
+
+		返回指定下标到指定下标的序列，从左边开始取
+			lrange redis_key start(从0开始) end(结束地方)
+				从左边开始取，以上面为例子，
+				返回
+					1)李四
+					2)张三
+		左弹出
+			lpop(key);
+			从左边弹出第一个数
+
+
+		右添加
+			rpush redis_key value1 value2 ...
+				相当于向右旋转90°的栈（后进先出）
+
+			rrange redis_key start(从0开始) end(结束地方)
+				从右边开始取
+				如果与上面的左添加添加的是同一个list
+				则现在的情况为
+					|李四|张三|王五|赵六|
+
+		查询list有多少数据
+			llen redis_key
+
+		从左边开始删除num个对应值，删的个数大于实际存在的个数时默认删除全部，不报错（注意：没有右删除）
+			lrem list_key num value 
+
+		右弹出
+			rpop(key);
+			从右边弹出第一个数
+
+			
+	set:
+		set存入数据：
+			sadd set_key value1 value2 ...
+			存入的是无序的，只要不添加或者删除，smembers set_key每次展示的顺序不会变
+		查看某个set中全部值
+			smembers set_key
+		查看某个set中数据个数
+			scard set_key
+		删除某set中数据
+			srem set_key value1 value2 ...
+
+	sorted set:
+		存入：
+			zadd key score1 value1 score2 value2 score3 value3 ...
+			sorted set是根据score的大小来从小到大排序的
+		查看全部的数据：
+			zrange key start(从0开始) end
+		查看总条数：
+			zcard key
+		删除sorted set中元素：
+			zrem key value1 value2...
+
+
+通用命令：
+	层级：
+		例子：
+		set cart:user01:item1 apple
+		cart:user01:item1相当于三级目录
+
+	失效时间：
+		redis有四个不同的命令可以用于设置键的生存时间
+		expire <key> <ttl>:用于将键key的生存时间设置为ttl秒
+		pexpire <key> <ttl>:用于将键key的生存时间设置为ttl毫秒
+		expireat <key> <timestamp>:用于将key的过期时间设置为timestamp所指定的秒数时间戳
+		pexpireat <key> <timestamp>:用于将key的过期时间设置为timestamp所指定的毫秒数时间戳
+		ttl：获取的值为-1说明没有设置有效期（即永不过期），当值为-2证明过了有效期
+
+		ttl key：查看key的有效剩余时间
+
+		在初始化时设置有效期
+			set key value ex(pex为毫秒) 10 [nx|xx]
+			[]为可选，nx在key不存在时成功，xx在key存在时操作成功
+		给已存在的键设置有效期
+			expire(pexpire为毫秒) key 10
+
+	通用删除命令：
+		del key
+
+redis持久化方案：
+	1.redis关闭之后在内存的数据会消失，如果关闭后重启需要还能看见，需要备份到磁盘，命令为：
+		bgsave
+		此时宕机重启后，执行bgsave之前的数据都会存在
+		缺点：需要频繁使用
+
+	2.rdb
+		在redis.conf配置文件中查找save ，设置
+			save 900 1   表示在900s内有1个key发生变化时，将数据持久化到磁盘
+			save 300 10   表示在300s内有10个key发生变化时，将数据持久化到磁盘
+			save 60 1000   表示在60s内有1000个key发生变化时，将数据持久化到磁盘
+			缺点：如果save 60 1000，在58s宕机数据不会保存，所以还是可能数据丢失
+
+	3.aof
+		在redis.conf配置文件中查找appendonly，将no改为yes，则之前的rdb方案会自动失效
+		aof是将我们的命令存储在一个aof文件中，每当服务器宕机再次重启时，redis会从这个文件中读取所有的命令，相当于模仿我们把这些命令重新敲一遍。
+		缺点：随着时间积累，这个文件会越来越大，当服务器宕机下次重启时，redis重新读这个文件过程会非常慢
+
+
+redis主从：
+	读写分离：
+	整个集群为基数台，因为规定集群环境下，大于百分之五十不可用表示集群不可用
+

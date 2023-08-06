@@ -1,0 +1,44 @@
+mysql主从同步（读写分离） 分布式配置
+
+
+1.编辑主服务器mysql配置文件
+	vim /etc/my.conf
+	在[mysqld]下面增加
+		server-id=1
+		log-bin=master-bin
+		log-bin-index=master-bin.index
+	配置好后重启：service mysqld restart
+	进入数据库执行show master status;
+2.编辑从服务器mysql配置文件
+	vim /etc/my.cnf
+	[client]
+	port=3306
+	socket=/var/lib/mysql/mysql.sock
+	[mysqld]
+	server-id=2
+	relay-log-index=slave-relay-bin.index
+	relay-log=slave-relay-bin
+	port=3306
+	配置好后重启：service mysqld restart
+	进入数据库执行show master status;
+	
+	主
+	create user 'slave';
+	grant replication slave on *.* to 'test'@'182.254.151.191' identified by 'mysql';
+
+
+
+
+错误：
+	mysql 8.0执行报错：
+		mysql> GRANT SELECT, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'slave'@'%' IDENTIFIED BY 'thy123' ;
+
+		替换执行：
+		mysql> CREATE USER canal IDENTIFIED BY 'thy123';
+		mysql> GRANT SELECT, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'slave'@'%';
+		mysql> GRANT ALL PRIVILEGES ON *.* TO 'slave'@'%' ;
+		mysql> FLUSH PRIVILEGES;
+
+
+关闭主从：
+	
